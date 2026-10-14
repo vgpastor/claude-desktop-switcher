@@ -290,6 +290,14 @@ func (w *windowsPlatform) LoginWindowVisible() (bool, error) {
 	return found != 0, err
 }
 
+func (w *windowsPlatform) FocusDesktopWindow() (uintptr, error) {
+	hwnd, err := w.mainWindow()
+	if hwnd != 0 && err == nil {
+		focusWindow(hwnd)
+	}
+	return hwnd, err
+}
+
 func (w *windowsPlatform) mainWindow() (uintptr, error) {
 	pids, err := w.desktopProcessPaths()
 	if err != nil || len(pids) == 0 {
@@ -511,6 +519,12 @@ func detectWindowsInstall() (windowsInstall, []windowsInstall) {
 	local := os.Getenv("LOCALAPPDATA")
 	appData := os.Getenv("APPDATA")
 	msixRoot := filepath.Join(local, "Packages", windowsPackageFamily, "LocalCache", "Roaming", "Claude")
+	if _, err := os.Stat(msixRoot); errors.Is(err, os.ErrNotExist) {
+		roamingRoot := filepath.Join(appData, "Claude")
+		if info, err := os.Stat(roamingRoot); err == nil && info.IsDir() {
+			msixRoot = roamingRoot
+		}
+	}
 	candidates := make([]windowsInstall, 0, 6)
 	if registered, ok := detectRegisteredWin32(appData); ok {
 		candidates = append(candidates, registered)
